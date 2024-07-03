@@ -2,12 +2,57 @@ const std = @import("std");
 const api = @import("api.zig");
 const Config = @import("Config.zig");
 
+fn attemptToSpawnServer(cfg: *const Config, allocator: std.mem.Allocator) !std.net.Stream {
+    const socket_path = cfg.values.UNIX_SOCKET_PATH;
+
+    const exe_path = try std.fs.selfExeDirPathAlloc(allocator);
+    var server_exe = std.ArrayList(u8).init(allocator);
+    try server_exe.appendSlice(exe_path);
+    try server_exe.appendSlice("/clockifyd");
+
+    const server_exe_slice = try server_exe.toOwnedSlice();
+
+    try std.fs.accessAbsolute(server_exe_slice, .{});
+
+    var server_proc = std.process.Child.init(&.{server_exe_slice}, allocator);
+    var env_map = try std.process.getEnvMap(allocator);
+    server_proc.env_map = &env_map;
+
+    try server_proc.spawn();
+
+    var remaining_attemps: u8 = 20;
+
+    return while (true) {
+        break std.net.connectUnixSocket(socket_path) catch |err| {
+            switch (err) {
+                error.ConnectionRefused => {
+                    if (remaining_attemps == 0) {
+                        return err;
+                    }
+                    remaining_attemps -= 1;
+                    std.time.sleep(std.time.ns_per_ms * 200);
+                    continue;
+                },
+                else => {
+                    return err;
+                },
+            }
+        };
+    };
+}
+
 fn makeApiCall(allocator: std.mem.Allocator, cfg: *const Config) !?[]const u8 {
     const socket_path = cfg.values.UNIX_SOCKET_PATH;
 
-    const stream = std.net.connectUnixSocket(socket_path) catch |err| {
-        std.log.err("Failed to connect to unix socket: {!}\n", .{err});
-        return err;
+    const stream = std.net.connectUnixSocket(socket_path) catch |err| switch (err) {
+        error.ConnectionRefused => attemptToSpawnServer(cfg, allocator) catch |spawn_err| {
+            std.log.err("Failed to spawn server: {!}\n", .{spawn_err});
+            @panic("Connection refused\n");
+        },
+        else => {
+            std.log.err("Failed to connect to unix socket: {!}\n", .{err});
+            return err;
+        },
     };
     defer stream.close();
 
@@ -59,10 +104,12 @@ fn makeApiCall(allocator: std.mem.Allocator, cfg: *const Config) !?[]const u8 {
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const cfg = try Config.init(gpa.allocator());
+    var fixed_buffer: [1024 * 1024 * 10]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&fixed_buffer);
 
-    const out_data = makeApiCall(gpa.allocator(), &cfg) catch {
+    const cfg = try Config.init(fba.allocator());
+
+    const out_data = makeApiCall(fba.allocator(), &cfg) catch {
         std.process.exit(1);
     };
 

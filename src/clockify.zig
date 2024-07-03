@@ -2,14 +2,12 @@ const std = @import("std");
 const Config = @import("config.zig");
 const Clockify = @This();
 
-cfg: *const Config.Values,
-
-const CmdResult = struct {
+pub const ClockifyCmdResult = struct {
     exit_code: u8,
     stdout: []const u8,
 };
 
-fn executeCmd(allocator: std.mem.Allocator, cmd: []const []const u8) !CmdResult {
+pub fn executeClockifyCmd(allocator: std.mem.Allocator, cmd: []const []const u8) !ClockifyCmdResult {
     const process = try std.process.Child.run(.{
         .argv = cmd,
         .allocator = allocator,
@@ -46,6 +44,8 @@ fn executeCmd(allocator: std.mem.Allocator, cmd: []const []const u8) !CmdResult 
     };
 }
 
+cfg: *const Config.Values,
+
 pub fn init(cfg: *const Config.Values) Clockify {
     return Clockify{ .cfg = cfg };
 }
@@ -77,14 +77,14 @@ fn getActiveDurationCmd(clockify: *const Clockify, allocator: std.mem.Allocator)
     return cmd.toOwnedSlice();
 }
 
-fn getActiveProject(clockify: *const Clockify, allocator: std.mem.Allocator) !CmdResult {
+fn getActiveProject(clockify: *const Clockify, allocator: std.mem.Allocator) !ClockifyCmdResult {
     const cmd = try clockify.getActiveProjectCmd(allocator);
-    return executeCmd(allocator, cmd);
+    return executeClockifyCmd(allocator, cmd);
 }
 
-fn getActiveDuration(clockify: *const Clockify, allocator: std.mem.Allocator) !CmdResult {
+fn getActiveDuration(clockify: *const Clockify, allocator: std.mem.Allocator) !ClockifyCmdResult {
     const cmd = try clockify.getActiveDurationCmd(allocator);
-    return executeCmd(allocator, cmd);
+    return executeClockifyCmd(allocator, cmd);
 }
 
 pub fn getDisplay(clockify: *const Clockify, allocator: std.mem.Allocator, out_buf: []u8) ![]const u8 {

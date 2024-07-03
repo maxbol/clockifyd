@@ -1,5 +1,5 @@
 {
-  description = "Zig project flake";
+  description = "Clockify IPC daemon";
 
   inputs = {
     zig2nix.url = "github:Cloudef/zig2nix";
@@ -13,6 +13,7 @@
     # <https://github.com/Cloudef/zig2nix/blob/master/flake.nix>
     env = zig2nix.outputs.zig-env.${system} {};
     system-triple = env.lib.zigTripleFromString system;
+    wrap-package = import ./wrapper.nix;
   in
     with builtins;
     with env.lib;
@@ -82,6 +83,8 @@
       apps.zon2nix = env.app [env.zon2nix] "zon2nix \"$@\"";
 
       # nix develop
-      devShells.default = env.mkShell {};
+      devShells.default =
+        env.mkShell {
+        };
     }));
 }

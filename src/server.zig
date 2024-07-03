@@ -135,7 +135,7 @@ fn updateCurrentDisplay(cfg: *const Config) void {
             @panic("Critical error, exiting...");
         };
 
-        std.time.sleep(1 * std.time.ns_per_s);
+        std.time.sleep(200 * std.time.ns_per_ms);
     }
 }
 
