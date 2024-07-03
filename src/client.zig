@@ -1,6 +1,6 @@
 const std = @import("std");
 const api = @import("api.zig");
-const Config = @import("Config.zig");
+const Config = @import("config.zig");
 
 fn attemptToSpawnServer(cfg: *const Config, allocator: std.mem.Allocator) !std.net.Stream {
     const socket_path = cfg.values.UNIX_SOCKET_PATH;
