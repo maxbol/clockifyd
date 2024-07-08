@@ -1,5 +1,8 @@
 const std = @import("std");
 
+fn addDeps(b: *std.Build, m: *std.Build.Module, dep_opts: anytype) void {
+    m.addImport("zul", b.dependency("zul", dep_opts).module("zul"));
+}
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
@@ -14,6 +17,7 @@ pub fn build(b: *std.Build) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
+    const dep_opts = .{ .target = target, .optimize = optimize };
 
     const server_exe = b.addExecutable(.{
         .name = "clockifyd",
@@ -21,6 +25,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    addDeps(b, &server_exe.root_module, dep_opts);
 
     const client_exe = b.addExecutable(.{
         .name = "clockifyd-get-current",
@@ -28,6 +33,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    addDeps(b, &client_exe.root_module, dep_opts);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
@@ -38,6 +44,25 @@ pub fn build(b: *std.Build) void {
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
     b.installArtifact(client_exe);
+
+    // ~~~ ZLS stuff ~~~
+    const check = b.step("check", "Check if the program compiles");
+    const server_check_exe = b.addExecutable(.{
+        .name = "clockifyd",
+        .root_source_file = b.path("src/server.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    addDeps(b, &server_check_exe.root_module, dep_opts);
+    const client_check_exe = b.addExecutable(.{
+        .name = "clockifyd-get-current",
+        .root_source_file = b.path("src/client.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    addDeps(b, &client_check_exe.root_module, dep_opts);
+    check.dependOn(&server_check_exe.step);
+    check.dependOn(&client_check_exe.step);
 
     // This *creates* a Run step in the build graph, to be executed when another
     // step is evaluated that depends on it. The next line below will establish
@@ -70,6 +95,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    addDeps(b, &server_exe_unit_tests.root_module, dep_opts);
 
     const run_server_exe_unit_tests = b.addRunArtifact(server_exe_unit_tests);
 
@@ -78,6 +104,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    addDeps(b, &client_exe_unit_tests.root_module, dep_opts);
 
     const run_client_exe_unit_tests = b.addRunArtifact(client_exe_unit_tests);
 

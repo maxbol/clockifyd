@@ -25,7 +25,7 @@ fn attemptToSpawnServer(cfg: *const Config, allocator: std.mem.Allocator) !std.n
     return while (true) {
         break std.net.connectUnixSocket(socket_path) catch |err| {
             switch (err) {
-                error.ConnectionRefused => {
+                error.FileNotFound, error.ConnectionRefused => {
                     if (remaining_attemps == 0) {
                         return err;
                     }
@@ -45,7 +45,7 @@ fn makeApiCall(allocator: std.mem.Allocator, cfg: *const Config) !?[]const u8 {
     const socket_path = cfg.values.UNIX_SOCKET_PATH;
 
     const stream = std.net.connectUnixSocket(socket_path) catch |err| switch (err) {
-        error.ConnectionRefused => attemptToSpawnServer(cfg, allocator) catch |spawn_err| {
+        error.FileNotFound, error.ConnectionRefused => attemptToSpawnServer(cfg, allocator) catch |spawn_err| {
             std.log.err("Failed to spawn server: {!}\n", .{spawn_err});
             @panic("Connection refused\n");
         },

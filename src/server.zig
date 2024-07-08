@@ -2,10 +2,43 @@ const std = @import("std");
 const Config = @import("config.zig");
 const Clockify = @import("clockify.zig");
 const api = @import("api.zig");
+const zul = @import("zul");
 
-var current_display: []const u8 = "Idle";
+var current_display: []const u8 = "Loading...";
 var current_display_buf: [512 * 1024]u8 = undefined;
 var lock = std.Thread.Mutex{};
+var cfg: Config = undefined;
+
+fn shutdown(int: i32) callconv(.C) void {
+    _ = int;
+    std.log.info("Shutting down, goodbye!", .{});
+
+    const socket_path = cfg.values.UNIX_SOCKET_PATH;
+
+    std.fs.accessAbsolute(socket_path, .{}) catch {
+        std.debug.print("Socket file does not exist, nothing to do.\n", .{});
+        return;
+    };
+
+    std.fs.deleteFileAbsolute(socket_path) catch {
+        std.debug.print("Failed to delete socket file, exiting anyway.\n", .{});
+        return;
+    };
+
+    std.posix.exit(0);
+}
+
+fn registerSigIntHandler() !void {
+    const action = std.posix.Sigaction{
+        .handler = .{ .handler = &shutdown },
+        .mask = 0,
+        .flags = 0,
+    };
+
+    try std.posix.sigaction(std.posix.SIG.INT, &action, null);
+    try std.posix.sigaction(std.posix.SIG.TERM, &action, null);
+    try std.posix.sigaction(std.posix.SIG.HUP, &action, null);
+}
 
 fn handleRequest(req: api.ClientMsg) api.ServerMsg {
     switch (req.operation) {
@@ -55,21 +88,26 @@ fn readAndProcessSocketMessages(child_allocator: std.mem.Allocator, reader: anyt
     };
 }
 
-fn setupUnixSocketListener(cfg: *const Config) !std.net.Server {
+fn setupUnixSocketListener() !std.net.Server {
     const socket_path = cfg.values.UNIX_SOCKET_PATH;
 
     var file_exists = true;
+
+    std.debug.print("Socket path: {s}\n", .{socket_path});
 
     std.fs.accessAbsolute(socket_path, .{}) catch {
         file_exists = false;
     };
 
     if (file_exists) {
-        std.fs.deleteFileAbsolute(socket_path) catch |err| {
-            std.log.err("Failed to delete existing unix socket file: {!}\n", .{err});
-            return err;
-        };
+        std.log.err("Server already running, exiting...", .{});
+
+        std.posix.exit(1);
+
+        return;
     }
+
+    try registerSigIntHandler();
 
     const addr = std.net.Address.initUnix(socket_path) catch |err| {
         std.log.err("Failed to create unix socket address: {!}\n", .{err});
@@ -86,9 +124,10 @@ fn setupUnixSocketListener(cfg: *const Config) !std.net.Server {
     return server;
 }
 
-fn listenOnUnixSocket(cfg: *const Config) void {
-    var server = setupUnixSocketListener(cfg) catch {
-        @panic("Critical error, exiting...");
+fn listenOnUnixSocket() void {
+    var server = setupUnixSocketListener() catch {
+        shutdown(1);
+        return;
     };
     defer server.deinit();
 
@@ -98,7 +137,8 @@ fn listenOnUnixSocket(cfg: *const Config) void {
     while (true) {
         const conn = server.accept() catch |err| {
             std.log.err("Failed to accept connection: {!}\n", .{err});
-            @panic("Critical error, exiting...");
+            shutdown(1);
+            return;
         };
 
         const stream = conn.stream;
@@ -108,12 +148,13 @@ fn listenOnUnixSocket(cfg: *const Config) void {
         const writer = stream.writer();
 
         readAndProcessSocketMessages(fixed_buffer_allocator.allocator(), reader, writer) catch {
-            @panic("Critical error, exiting...");
+            shutdown(1);
+            return;
         };
     }
 }
 
-fn updateCurrentDisplay(cfg: *const Config) void {
+fn updateCurrentDisplay() void {
     // Allocate one megabyte of memory on the stack, this should
     // reasonably be all we ever need.
     var fixed_buffer: [10 * 1024 * 1024]u8 = undefined;
@@ -130,10 +171,15 @@ fn updateCurrentDisplay(cfg: *const Config) void {
         lock.lock();
         defer lock.unlock();
 
-        current_display = clockify.getDisplay(arena.allocator(), &current_display_buf) catch |err| {
+        var stream = std.io.fixedBufferStream(&current_display_buf);
+
+        _ = clockify.getDisplay(arena.allocator(), stream.writer()) catch |err| {
             std.log.err("Unexpected error: {!}\n", .{err});
-            @panic("Critical error, exiting...");
+            shutdown(1);
+            return;
         };
+
+        current_display = stream.getWritten();
 
         std.time.sleep(200 * std.time.ns_per_ms);
     }
@@ -141,12 +187,12 @@ fn updateCurrentDisplay(cfg: *const Config) void {
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const cfg = try Config.init(gpa.allocator());
+    cfg = try Config.init(gpa.allocator());
 
     var wg = std.Thread.WaitGroup{};
 
-    wg.spawnManager(updateCurrentDisplay, .{&cfg});
-    wg.spawnManager(listenOnUnixSocket, .{&cfg});
+    wg.spawnManager(updateCurrentDisplay, .{});
+    wg.spawnManager(listenOnUnixSocket, .{});
 
     wg.wait();
 }
