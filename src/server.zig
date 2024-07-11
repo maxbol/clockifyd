@@ -3,6 +3,7 @@ const Config = @import("config.zig");
 const Clockify = @import("clockify.zig");
 const api = @import("api.zig");
 const zul = @import("zul");
+const builtin = @import("builtin");
 
 var current_display: []const u8 = "Loading...";
 var current_display_buf: [512 * 1024]u8 = undefined;
@@ -28,12 +29,35 @@ fn shutdown(int: i32) callconv(.C) void {
     std.posix.exit(0);
 }
 
-fn registerSigIntHandler() !void {
-    const action = std.posix.Sigaction{
+fn getLinuxSigAction() std.os.linux.Sigaction {
+    return std.os.linux.Sigaction{
         .handler = .{ .handler = &shutdown },
-        .mask = 0,
         .flags = 0,
+        .mask = .{0} ** 32,
     };
+}
+
+fn getStdCSigAction() std.c.Sigaction {
+    return std.c.SigAction{
+        .handler = .{ .handler = &shutdown },
+        .flags = 0,
+        .mask = 0,
+    };
+}
+
+fn getPosixSigAction() std.posix.Sigaction {
+    const use_libc = builtin.link_libc or switch (builtin.os.tag) {
+        .windows, .wasi => true,
+        else => false,
+    };
+    if (use_libc) {
+        return getStdCSigAction();
+    }
+    return getLinuxSigAction();
+}
+
+fn registerSigIntHandler() !void {
+    const action = getPosixSigAction();
 
     try std.posix.sigaction(std.posix.SIG.INT, &action, null);
     try std.posix.sigaction(std.posix.SIG.TERM, &action, null);
