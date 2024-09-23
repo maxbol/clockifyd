@@ -33,6 +33,11 @@
             # This disables LD_LIBRARY_PATH mangling, binary patching etc...
             # The package won't be usable inside nix.
             zigDisableWrap = true;
+
+            meta = {
+              description = "Clockify IPC daemon";
+              license = lib.licenses.mit;
+            };
           }
           // optionalAttrs (!pathExists ./build.zig.zon) {
             pname = "my-zig-project";

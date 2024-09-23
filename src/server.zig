@@ -38,7 +38,7 @@ fn getLinuxSigAction() std.os.linux.Sigaction {
 }
 
 fn getStdCSigAction() std.c.Sigaction {
-    return std.c.SigAction{
+    return std.c.Sigaction{
         .handler = .{ .handler = &shutdown },
         .flags = 0,
         .mask = 0,
@@ -182,9 +182,9 @@ fn updateCurrentDisplay() void {
     // Allocate one megabyte of memory on the stack, this should
     // reasonably be all we ever need.
     var fixed_buffer: [10 * 1024 * 1024]u8 = undefined;
-    var fixed_buffer_allocator = std.heap.FixedBufferAllocator.init(&fixed_buffer);
+    var fba = std.heap.FixedBufferAllocator.init(&fixed_buffer);
 
-    const allocator = fixed_buffer_allocator.allocator();
+    const allocator = fba.allocator();
 
     const clockify = Clockify.init(&cfg.values);
 
