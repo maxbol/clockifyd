@@ -25,7 +25,7 @@
     .dependencies = .{
         .zul = .{
             .url = "https://github.com/karlseguin/zul/tarball/master",
-            .hash = "1220e4d73251b8266b8e8ec1bee1ce95edf409ca67b96707b8a7ec58d856b7c8a82a",
+            .hash = "122012992f8502acdcb69ae0f35682850b5c57abe892b1c717bc6dba65d05653fa76",
         },
     },
     .paths = .{

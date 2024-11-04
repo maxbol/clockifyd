@@ -36,7 +36,7 @@
 
             meta = {
               description = "Clockify IPC daemon";
-              license = lib.licenses.mit;
+              license = licenses.mit;
             };
           }
           // optionalAttrs (!pathExists ./build.zig.zon) {
