@@ -23,7 +23,21 @@ const MICROSECONDS_IN_A_MIN = 60_000_000;
 const MICROSECONDS_IN_A_SEC = 1_000_000;
 
 fn getTimeWithoutMicrosFromMicros(micros: u64) zul.Time {
-    return .{ .hour = @intCast(@divTrunc(micros, MICROSECONDS_IN_AN_HOUR)), .min = @intCast(@divTrunc(@rem(micros, MICROSECONDS_IN_AN_HOUR), MICROSECONDS_IN_A_MIN)), .sec = @intCast(@divTrunc(@rem(micros, MICROSECONDS_IN_A_MIN), MICROSECONDS_IN_A_SEC)), .micros = 0 };
+    return .{
+        .hour = @intCast(@divTrunc(
+            micros,
+            MICROSECONDS_IN_AN_HOUR,
+        )),
+        .min = @intCast(@divTrunc(
+            @rem(micros, MICROSECONDS_IN_AN_HOUR),
+            MICROSECONDS_IN_A_MIN,
+        )),
+        .sec = @intCast(@divTrunc(
+            @rem(micros, MICROSECONDS_IN_A_MIN),
+            MICROSECONDS_IN_A_SEC,
+        )),
+        .micros = 0,
+    };
 }
 
 pub fn executeClockifyCmd(allocator: std.mem.Allocator, cmd: []const []const u8) !ClockifyCmdResult {

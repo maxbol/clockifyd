@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    addDeps(b, &server_exe.root_module, dep_opts);
+    addDeps(b, server_exe.root_module, dep_opts);
 
     const client_exe = b.addExecutable(.{
         .name = "clockifyd-get-current",
@@ -33,7 +33,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    addDeps(b, &client_exe.root_module, dep_opts);
+    addDeps(b, client_exe.root_module, dep_opts);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
@@ -53,14 +53,14 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    addDeps(b, &server_check_exe.root_module, dep_opts);
+    addDeps(b, server_check_exe.root_module, dep_opts);
     const client_check_exe = b.addExecutable(.{
         .name = "clockifyd-get-current",
         .root_source_file = b.path("src/client.zig"),
         .target = target,
         .optimize = optimize,
     });
-    addDeps(b, &client_check_exe.root_module, dep_opts);
+    addDeps(b, client_check_exe.root_module, dep_opts);
     check.dependOn(&server_check_exe.step);
     check.dependOn(&client_check_exe.step);
 
@@ -95,7 +95,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    addDeps(b, &server_exe_unit_tests.root_module, dep_opts);
+    addDeps(b, server_exe_unit_tests.root_module, dep_opts);
 
     const run_server_exe_unit_tests = b.addRunArtifact(server_exe_unit_tests);
 
@@ -104,7 +104,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    addDeps(b, &client_exe_unit_tests.root_module, dep_opts);
+    addDeps(b, client_exe_unit_tests.root_module, dep_opts);
 
     const run_client_exe_unit_tests = b.addRunArtifact(client_exe_unit_tests);
 

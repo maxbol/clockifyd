@@ -59,9 +59,9 @@ fn getPosixSigAction() std.posix.Sigaction {
 fn registerSigIntHandler() !void {
     const action = getPosixSigAction();
 
-    try std.posix.sigaction(std.posix.SIG.INT, &action, null);
-    try std.posix.sigaction(std.posix.SIG.TERM, &action, null);
-    try std.posix.sigaction(std.posix.SIG.HUP, &action, null);
+    std.posix.sigaction(std.posix.SIG.INT, &action, null);
+    std.posix.sigaction(std.posix.SIG.TERM, &action, null);
+    std.posix.sigaction(std.posix.SIG.HUP, &action, null);
 }
 
 fn handleRequest(req: api.ClientMsg) api.ServerMsg {
