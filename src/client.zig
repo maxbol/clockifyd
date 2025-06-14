@@ -121,6 +121,10 @@ pub fn main() !void {
     };
     defer res.deinit();
 
+    if (res.args.help != 0) {
+        return clap.help(std.io.getStdErr().writer(), clap.Help, &params, .{});
+    }
+
     var cfg = try Config.init(allocator);
 
     if (res.args.@"spawn-server" != 0) {
