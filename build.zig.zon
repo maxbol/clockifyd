@@ -28,6 +28,10 @@
             .url = "git+https://github.com/karlseguin/zul#007aa7c4ed77272416c8111f4ce403e86abd56d3",
             .hash = "zul-0.0.0-1oDotyJMBwBli3UBm47WYeNZSMNni_DbkT-jTtDpowDW",
         },
+        .clap = .{
+            .url = "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.10.0.tar.gz",
+            .hash = "clap-0.10.0-oBajB434AQBDh-Ei3YtoKIRxZacVPF1iSwp3IX_ZB8f0",
+        },
     },
     .paths = .{
         "build.zig",

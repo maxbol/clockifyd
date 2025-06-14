@@ -2,6 +2,7 @@ const std = @import("std");
 
 fn addDeps(b: *std.Build, m: *std.Build.Module, dep_opts: anytype) void {
     m.addImport("zul", b.dependency("zul", dep_opts).module("zul"));
+    m.addImport("clap", b.dependency("clap", dep_opts).module("clap"));
 }
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external

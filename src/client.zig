@@ -1,6 +1,7 @@
 const std = @import("std");
 const api = @import("api.zig");
 const Config = @import("config.zig");
+const clap = @import("clap");
 
 fn attemptToSpawnServer(cfg: *const Config, allocator: std.mem.Allocator) !std.net.Stream {
     const socket_path = cfg.values.UNIX_SOCKET_PATH;
@@ -45,14 +46,14 @@ fn makeApiCall(allocator: std.mem.Allocator, cfg: *const Config) !?[]const u8 {
     const socket_path = cfg.values.UNIX_SOCKET_PATH;
 
     const stream = std.net.connectUnixSocket(socket_path) catch |err| switch (err) {
-        error.FileNotFound, error.ConnectionRefused => attemptToSpawnServer(cfg, allocator) catch |spawn_err| {
+        error.FileNotFound, error.ConnectionRefused => if (cfg.values.SPAWN_SERVER) attemptToSpawnServer(cfg, allocator) catch |spawn_err| {
             std.log.err("Failed to spawn server: {!}\n", .{spawn_err});
             @panic("Connection refused\n");
-        },
-        else => {
-            std.log.err("Failed to connect to unix socket: {!}\n", .{err});
-            return err;
-        },
+        } else err,
+        else => err,
+    } catch |err| {
+        std.log.err("Failed to connect to unix socket: {!}\n", .{err});
+        return err;
     };
     defer stream.close();
 
@@ -106,10 +107,27 @@ fn makeApiCall(allocator: std.mem.Allocator, cfg: *const Config) !?[]const u8 {
 pub fn main() !void {
     var fixed_buffer: [1024 * 1024 * 10]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&fixed_buffer);
+    const allocator = fba.allocator();
 
-    const cfg = try Config.init(fba.allocator());
+    const params = comptime clap.parseParamsComptime(
+        \\-h, --help            Show this message
+        \\-s, --spawn-server    Attempt to spawn server if it's not running
+    );
 
-    const out_data = makeApiCall(fba.allocator(), &cfg) catch {
+    var diag = clap.Diagnostic{};
+    var res = clap.parse(clap.Help, &params, &.{}, .{ .diagnostic = &diag, .allocator = allocator }) catch |err| {
+        diag.report(std.io.getStdErr().writer(), err) catch {};
+        return err;
+    };
+    defer res.deinit();
+
+    var cfg = try Config.init(allocator);
+
+    if (res.args.@"spawn-server" != 0) {
+        cfg.values.SPAWN_SERVER = true;
+    }
+
+    const out_data = makeApiCall(allocator, &cfg) catch {
         std.process.exit(1);
     };
 

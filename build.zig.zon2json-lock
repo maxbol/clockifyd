@@ -4,5 +4,10 @@
     "url": "git+https://github.com/karlseguin/zul#007aa7c4ed77272416c8111f4ce403e86abd56d3",
     "hash": "sha256-JJu28RQ5O9YRynw5UgCwctIsLAQrV7Hg5UvxBtgknV8=",
     "rev": "007aa7c4ed77272416c8111f4ce403e86abd56d3"
+  },
+  "clap-0.10.0-oBajB434AQBDh-Ei3YtoKIRxZacVPF1iSwp3IX_ZB8f0": {
+    "name": "clap",
+    "url": "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.10.0.tar.gz",
+    "hash": "sha256-cbPGmVlIXwIuRPIfQoFXzwLulT4XEv8rQWcJUl1ueyo="
   }
 }

@@ -1,12 +1,14 @@
 const std = @import("std");
 const fs = std.fs;
 const json = std.json;
+const mem = std.mem;
 
 pub const Values = struct {
     CLOCKIFY_CLI_BIN: []const u8,
     CLOCKIFY_CLI_CFG: []const u8,
     TEMPLATE_STR: []const u8,
     UNIX_SOCKET_PATH: []const u8 = "/tmp/clockifyd.sock",
+    SPAWN_SERVER: bool,
 };
 
 allocator: std.mem.Allocator,
@@ -41,6 +43,7 @@ fn createFromEnv(allocator: std.mem.Allocator) !@This() {
         .CLOCKIFY_CLI_CFG = env_map.get("CLOCKIFY_CLI_CFG") orelse try default_clockify_cfg.toOwnedSlice(),
         .TEMPLATE_STR = env_map.get("TEMPLATE_STR") orelse "{{ .Project.ClientName }} 󰁕 {{ .Project.Name }}",
         .UNIX_SOCKET_PATH = env_map.get("UNIX_SOCKET_PATH") orelse "/tmp/clockifyd.sock",
+        .SPAWN_SERVER = mem.eql(u8, env_map.get("SPAWN_SERVER") orelse "0", "1"),
     };
 
     return .{
