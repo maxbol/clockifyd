@@ -11,7 +11,9 @@
     # Zig flake helper
     # Check the flake.nix in zig2nix project for more options:
     # <https://github.com/Cloudef/zig2nix/blob/master/flake.nix>
-    env = zig2nix.outputs.zig-env.${system} {};
+    env = zig2nix.outputs.zig-env.${system} {
+      zig = zig2nix.packages.${system}.zig-0_14_1;
+    };
   in
     with builtins;
     with env.pkgs.lib; let
